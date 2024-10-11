@@ -73,37 +73,39 @@ func restartScan() {
 
             deviceUUID := result.Address.String()
 
+            // 연결 끊김 처리 (RSSI 확인)
             if result.RSSI <= RSSIThreshold {
                 handleDisconnect(deviceUUID)
-                return
-            }
+            } else {
+                device, err := adapter.Connect(result.Address, bluetooth.ConnectionParams{})
+                if err != nil {
+                    // 연결 실패 시 Disconnect 처리
+                    handleDisconnect(deviceUUID)
+                } else {
+                    defer device.Disconnect()
 
-            device, err := adapter.Connect(result.Address, bluetooth.ConnectionParams{})
-            if err != nil {
-                handleDisconnect(deviceUUID)
-                return
-            }
-            defer device.Disconnect()
+                    // 서비스 탐색을 통해 UUID를 확인
+                    services, err := device.DiscoverServices(nil)
+                    if err != nil {
+                        handleDisconnect(deviceUUID) // 서비스 탐색 실패 시에도 Disconnect 처리
+                        return
+                    }
 
-            // 서비스 탐색을 통해 UUID를 확인
-            services, err := device.DiscoverServices(nil)
-            if err != nil {
-                handleDisconnect(deviceUUID)
-                return
-            }
-
-            // 연결 시에도 서비스 UUID 확인 및 전송
-            for _, service := range services {
-                uuid := service.UUID().String()
-                if uuid != "00001801-0000-1000-8000-00805f9b34fb" {
-                    if result.RSSI > RSSIThreshold {
-                        handleConnect(uuid)
-                        fmt.Printf("Device Address: %s, UUID: %s, RSSI: %d\n", deviceUUID, uuid, result.RSSI)  // UUID 출력
-                    } else {
-                        handleDisconnect(uuid)
+                    // 연결 시에도 서비스 UUID 확인 및 전송
+                    for _, service := range services {
+                        uuid := service.UUID().String()
+                        if uuid != "00001801-0000-1000-8000-00805f9b34fb" {
+                            if result.RSSI > RSSIThreshold {
+                                handleConnect(uuid) // 연결 처리
+                                fmt.Printf("Device Address: %s, UUID: %s, RSSI: %d\n", deviceUUID, uuid, result.RSSI)
+                            } else {
+                                handleDisconnect(uuid) // RSSI가 떨어지면 Disconnect
+                            }
+                        }
                     }
                 }
             }
+
         })
 
         if err != nil {
