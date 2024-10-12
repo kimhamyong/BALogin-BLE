@@ -7,7 +7,7 @@ option go_package = "ble-gateway/proto;device";
 // DeviceService definition
 service DeviceService {
     // Server requests an unused UUID from the client
-    rpc RequestUnusedUUID (UUIDRequest) returns (UUIDResponse);
+    rpc RequestUnusedUUID (UUIDRequest) returns (Response);
     
     // BLE device status transmission
     rpc SendDeviceStatus (DeviceStatus) returns (Response);
@@ -15,13 +15,7 @@ service DeviceService {
 
 // UUID request message
 message UUIDRequest {
-    string uuid = 1; // 회원 가입 시 보낼 uuid
-}
-
-// Unused UUID response message
-message UUIDResponse {
-    string uuid = 1;      // 회원 가입 시 보낸 uuid
-    string message = 2;   // Response message from the server ("success" or "failure")
+    string uuid = 1; // uuid to send when signup
 }
 
 // BLE device status message

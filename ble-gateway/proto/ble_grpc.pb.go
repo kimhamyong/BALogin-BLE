@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DeviceServiceClient interface {
 	// Server requests an unused UUID from the client
-	RequestUnusedUUID(ctx context.Context, in *UUIDRequest, opts ...grpc.CallOption) (*UUIDResponse, error)
+	RequestUnusedUUID(ctx context.Context, in *UUIDRequest, opts ...grpc.CallOption) (*Response, error)
 	// BLE device status transmission
 	SendDeviceStatus(ctx context.Context, in *DeviceStatus, opts ...grpc.CallOption) (*Response, error)
 }
@@ -36,8 +36,8 @@ func NewDeviceServiceClient(cc grpc.ClientConnInterface) DeviceServiceClient {
 	return &deviceServiceClient{cc}
 }
 
-func (c *deviceServiceClient) RequestUnusedUUID(ctx context.Context, in *UUIDRequest, opts ...grpc.CallOption) (*UUIDResponse, error) {
-	out := new(UUIDResponse)
+func (c *deviceServiceClient) RequestUnusedUUID(ctx context.Context, in *UUIDRequest, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
 	err := c.cc.Invoke(ctx, "/device.DeviceService/RequestUnusedUUID", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (c *deviceServiceClient) SendDeviceStatus(ctx context.Context, in *DeviceSt
 // for forward compatibility
 type DeviceServiceServer interface {
 	// Server requests an unused UUID from the client
-	RequestUnusedUUID(context.Context, *UUIDRequest) (*UUIDResponse, error)
+	RequestUnusedUUID(context.Context, *UUIDRequest) (*Response, error)
 	// BLE device status transmission
 	SendDeviceStatus(context.Context, *DeviceStatus) (*Response, error)
 	mustEmbedUnimplementedDeviceServiceServer()
@@ -69,7 +69,7 @@ type DeviceServiceServer interface {
 type UnimplementedDeviceServiceServer struct {
 }
 
-func (UnimplementedDeviceServiceServer) RequestUnusedUUID(context.Context, *UUIDRequest) (*UUIDResponse, error) {
+func (UnimplementedDeviceServiceServer) RequestUnusedUUID(context.Context, *UUIDRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestUnusedUUID not implemented")
 }
 func (UnimplementedDeviceServiceServer) SendDeviceStatus(context.Context, *DeviceStatus) (*Response, error) {
