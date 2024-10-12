@@ -16,7 +16,7 @@ var mu sync.Mutex
 // RSSI 임계값
 const RSSIThreshold = -90
 
-// 타임아웃 설정 (30초 동안 감지되지 않으면 disconnect 처리)
+// 타임아웃 설정 (30초 동안 감지되지 않으면 disconnect 처리)저
 const timeoutDuration = 30 * time.Second
 
 // 신호 감지 주기를 3초로 설정

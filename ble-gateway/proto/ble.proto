@@ -1,18 +1,36 @@
 syntax = "proto3";
 
-package ble;
+package device;
 
-option go_package = "ble-gateway/proto;ble";
+option go_package = "ble-gateway/proto;device";
 
-service BLEService {
+// DeviceService definition
+service DeviceService {
+    // Server requests an unused UUID from the client
+    rpc RequestUnusedUUID (UUIDRequest) returns (UUIDResponse);
+    
+    // BLE device status transmission
     rpc SendDeviceStatus (DeviceStatus) returns (Response);
 }
 
-message DeviceStatus {
-    string uuid = 1;
-    string status = 2;  // "connected" or "disconnected"
+// UUID request message
+message UUIDRequest {
+    string uuid = 1; // 회원 가입 시 보낼 uuid
 }
 
+// Unused UUID response message
+message UUIDResponse {
+    string uuid = 1;      // 회원 가입 시 보낸 uuid
+    string message = 2;   // Response message from the server ("success" or "failure")
+}
+
+// BLE device status message
+message DeviceStatus {
+    string uuid = 1;      // BLE device UUID
+    int32 status = 2;     // 0: disconnected, 1: connected
+}
+
+// Server response message (BLE device status message)
 message Response {
-    string message = 1;
+    string message = 1;   // Response message from the server ("success" or "failure")
 }
