@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ble;
+
+option go_package = "ble-gateway/proto;ble";
+
+service BLEService {
+    rpc SendDeviceStatus (DeviceStatus) returns (Response);
+}
+
+message DeviceStatus {
+    string uuid = 1;
+    string status = 2;  // "connected" or "disconnected"
+}
+
+message Response {
+    string message = 1;
+}

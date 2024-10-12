@@ -1,4 +1,4 @@
-module ble_scanner
+module ble-gateway
 
 go 1.22.2
 
