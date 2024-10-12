@@ -2,7 +2,12 @@ module ble-gateway
 
 go 1.22.2
 
-require tinygo.org/x/bluetooth v0.10.0
+require (
+	github.com/mattn/go-sqlite3 v1.14.24
+	google.golang.org/grpc v1.67.1
+	google.golang.org/protobuf v1.35.1
+	tinygo.org/x/bluetooth v0.10.0
+)
 
 require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -18,6 +23,4 @@ require (
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
-	google.golang.org/grpc v1.67.1 // indirect
-	google.golang.org/protobuf v1.35.1 // indirect
 )

@@ -1,35 +1,63 @@
-package main
+package ble
 
 import (
+    "database/sql"
     "fmt"
     "log"
     "sync"
     "time"
     "tinygo.org/x/bluetooth"
+    _ "github.com/mattn/go-sqlite3" // SQLite3 드라이버
     pb "ble-gateway/proto"
+    "ble-gateway/handler"
 )
+
+// BLE 어댑터 초기화
+var adapter = bluetooth.DefaultAdapter
 
 var connectedDevices = make(map[string]string) // MAC 주소 -> UUID 매핑
 var lastSeen = make(map[string]time.Time)      // MAC 주소 -> 마지막으로 감지된 시간
 var mu sync.Mutex
 
-// RSSI 임계값
 const RSSIThreshold = -90
-
-// 타임아웃 설정 (30초 동안 감지되지 않으면 disconnect 처리)저
 const timeoutDuration = 30 * time.Second
-
-// 신호 감지 주기를 3초로 설정
 const scanInterval = 3 * time.Second
 
+// SQLite 데이터베이스 열기
+func openDB() (*sql.DB, error) {
+    db, err := sql.Open("sqlite3", "./ble.db")
+    if err != nil {
+        return nil, fmt.Errorf("failed to open database: %v", err)
+    }
+    return db, nil
+}
+
+// 특정 UUID의 is_active 값 확인
+func isDeviceActive(db *sql.DB, uuid string) (bool, error) {
+    var isActive int
+    query := `SELECT is_active FROM devices WHERE uuid = ?`
+    err := db.QueryRow(query, uuid).Scan(&isActive)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return false, nil // UUID가 데이터베이스에 없으면 연결하지 않음
+        }
+        return false, fmt.Errorf("failed to check device active status: %v", err)
+    }
+    return isActive == 1, nil // is_active가 1이면 true, 아니면 false
+}
+
 // BLE 스캔 재시작 및 최신 장치 상태 반영 함수
-func restartScan(client pb.BLEServiceClient) {
+func RestartScan(client pb.DeviceServiceClient) {
+    db, err := openDB()
+    if err != nil {
+        log.Fatalf("Database connection failed: %v", err)
+    }
+    defer db.Close()
+
     for {
-        time.Sleep(scanInterval) // 신호 감지 주기를 3초로 설정
+        time.Sleep(scanInterval)
 
         fmt.Println("Restarting BLE scan to refresh device states...")
-
-        // 타임아웃 체크를 먼저 수행
         checkTimeouts(client)
 
         err := adapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
@@ -37,38 +65,44 @@ func restartScan(client pb.BLEServiceClient) {
                 return
             }
 
-            macAddress := result.Address.String() // MAC 주소 사용
-
-            // 장치가 감지되면 타임아웃 처리를 막기 위해 lastSeen을 즉시 업데이트
+            macAddress := result.Address.String()
             lastSeen[macAddress] = time.Now()
 
             device, err := adapter.Connect(result.Address, bluetooth.ConnectionParams{})
             if err != nil {
-                handleDisconnect(macAddress, client) // 연결 실패 시 Disconnect 처리
+                handleDisconnect(macAddress, client)
                 return
             }
             defer device.Disconnect()
 
-            // 서비스 탐색을 통해 UUID를 확인
             services, err := device.DiscoverServices(nil)
             if err != nil {
-                handleDisconnect(macAddress, client) // 서비스 탐색 실패 시에도 Disconnect 처리
+                handleDisconnect(macAddress, client)
                 return
             }
 
-            // UUID 추출 및 연결 처리
             for _, service := range services {
                 uuid := service.UUID().String()
-                if uuid != "00001801-0000-1000-8000-00805f9b34fb" { // 기본 서비스 UUID 필터링
+                if uuid != "00001801-0000-1000-8000-00805f9b34fb" {
                     if result.RSSI > RSSIThreshold {
-                        handleConnect(macAddress, uuid, client) // 연결 처리
-                        fmt.Printf("Device Address: %s, UUID: %s, RSSI: %d\n", macAddress, uuid, result.RSSI)
+                        isActive, err := isDeviceActive(db, uuid)
+                        if err != nil {
+                            log.Printf("Error checking device active status: %v", err)
+                            continue
+                        }
+
+                        if isActive {
+                            handleConnect(macAddress, uuid, client)
+                            fmt.Printf("Device Address: %s, UUID: %s, RSSI: %d\n", macAddress, uuid, result.RSSI)
+                        } else {
+                            fmt.Printf("Device UUID %s is not active. Skipping connection.\n", uuid)
+                            handleDisconnect(macAddress, client)
+                        }
                     } else {
-                        handleDisconnect(macAddress, client) // RSSI가 떨어지면 Disconnect
+                        handleDisconnect(macAddress, client)
                     }
                 }
             }
-
         })
 
         if err != nil {
@@ -77,36 +111,35 @@ func restartScan(client pb.BLEServiceClient) {
     }
 }
 
-// BLE 장치 연결이 끊겼을 때 처리하는 함수
-func handleDisconnect(macAddress string, client pb.BLEServiceClient) {
+// BLE 장치 연결/해제 함수
+func handleDisconnect(macAddress string, client pb.DeviceServiceClient) {
     mu.Lock()
     defer mu.Unlock()
 
     if uuid, exists := connectedDevices[macAddress]; exists {
         fmt.Printf("Device %s disconnected.\n", uuid)
-        delete(connectedDevices, macAddress) // MAC 주소에서 장치를 삭제
-        delete(lastSeen, macAddress)         // 감지된 시간 기록 삭제
-        sendDeviceStatus(client, uuid, "disconnected") // UUID와 상태를 서버에 전송
+        delete(connectedDevices, macAddress)
+        delete(lastSeen, macAddress)
+        handler.SendDeviceStatus(client, uuid, 0)
     }
 }
 
-// BLE 장치가 연결되었을 때 처리하는 함수
-func handleConnect(macAddress string, uuid string, client pb.BLEServiceClient) {
+func handleConnect(macAddress string, uuid string, client pb.DeviceServiceClient) {
     mu.Lock()
     defer mu.Unlock()
 
     if _, exists := connectedDevices[macAddress]; !exists {
         fmt.Printf("Device %s connected.\n", uuid)
         connectedDevices[macAddress] = uuid
-        lastSeen[macAddress] = time.Now()  // 현재 시간을 마지막 감지 시간으로 기록
-        sendDeviceStatus(client, uuid, "connected") // UUID와 상태를 서버에 전송
+        lastSeen[macAddress] = time.Now()
+        handler.SendDeviceStatus(client, uuid, 1)
     } else {
-        lastSeen[macAddress] = time.Now()  // 이미 연결된 장치의 경우, 마지막 감지 시간만 업데이트
+        lastSeen[macAddress] = time.Now()
     }
 }
 
-// 장치의 타임아웃을 체크하고, 일정 시간 동안 감지되지 않은 장치를 disconnect 처리하는 함수
-func checkTimeouts(client pb.BLEServiceClient) {
+// 장치의 타임아웃을 체크하고, 감지되지 않으면 disconnect 처리
+func checkTimeouts(client pb.DeviceServiceClient) {
     mu.Lock()
     defer mu.Unlock()
 
@@ -114,7 +147,6 @@ func checkTimeouts(client pb.BLEServiceClient) {
 
     for macAddress, lastSeenTime := range lastSeen {
         if currentTime.Sub(lastSeenTime) > timeoutDuration {
-            // 장치가 타임아웃에 도달한 경우 disconnect 처리
             fmt.Printf("Device %s timed out (no signal for %v).\n", connectedDevices[macAddress], timeoutDuration)
             handleDisconnect(macAddress, client)
         }
