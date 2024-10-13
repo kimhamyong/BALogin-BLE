@@ -8,30 +8,30 @@ import (
     pb "ble-gateway/proto"
 )
 
-// gRPC 서버 주소
-const BaloginServerAddress = "localhost:50053"
+// gRPC server address
+const BaloginServerAddress = "localhost:50053" // for testing
 
-// gRPC 클라이언트 생성 함수
+// Function to create a gRPC client
 func ServiceClient() pb.DeviceServiceClient {
     conn, err := grpc.Dial(BaloginServerAddress, grpc.WithInsecure(), grpc.WithBlock())
     if err != nil {
         log.Printf("Failed to connect to gRPC server: %v", err)
-        return nil // 실패한 경우 nil을 반환하여 호출자가 처리할 수 있도록 함
+        return nil // Return nil if the connection fails, allowing the caller to handle the error
     }
     return pb.NewDeviceServiceClient(conn)
 }
 
-// gRPC를 통해 장치 상태 전송 함수
+// Function to send device status via gRPC
 func SendDeviceStatus(client pb.DeviceServiceClient, uuid string, status int32) {
     if client == nil {
         log.Printf("Client is not initialized")
         return
     }
 
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) // 타임아웃 5초로 설정
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) // Set a 5-second timeout
     defer cancel()
 
-    // BLE 장치 상태를 서버에 전송
+    // Send BLE device status to the server
     res, err := client.SendDeviceStatus(ctx, &pb.DeviceStatus{
         Uuid:   uuid,
         Status: status,

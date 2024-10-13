@@ -13,7 +13,6 @@ var adapter = bluetooth.DefaultAdapter
 func main() {
     fmt.Println("Starting program...")
 
-    fmt.Println("Initializing BLE adapter...")
     must("enable BLE stack", adapter.Enable())
     fmt.Println("BLE adapter initialized.")
 
