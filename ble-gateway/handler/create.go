@@ -33,11 +33,21 @@ func findInactiveUUID(db *sql.DB) (string, error) {
     err := db.QueryRow(query).Scan(&uuid)
     if err != nil {
         if err == sql.ErrNoRows {
-            return "", fmt.Errorf("no inactive UUID found")
+            return "", fmt.Errorf("There are not enough devices available.") //사용가능한 ble 기기가 없는 경우
         }
         return "", fmt.Errorf("failed to query inactive UUID: %v", err)
     }
     return uuid, nil
+}
+
+// UUID의 is_active 값을 1로 업데이트하는 함수
+func updateUUIDStatusToActive(db *sql.DB, uuid string) error {
+    query := `UPDATE devices SET is_active = 1 WHERE uuid = ?`
+    _, err := db.Exec(query, uuid)
+    if err != nil {
+        return fmt.Errorf("failed to update UUID status: %v", err)
+    }
+    return nil
 }
 
 // RequestUnusedUUID: 서버에서 UUID 요청이 오면 호출되는 함수
@@ -59,7 +69,18 @@ func (s *server) RequestUnusedUUID(ctx context.Context, req *pb.UUIDRequest) (*p
         return &pb.Response{Message: "No inactive UUID found"}, err
     }
 
-    return &pb.Response{Message: fmt.Sprintf("UUID: %s", uuid)}, nil
+    // UUID가 성공적으로 처리되었음을 응답
+    responseMessage := fmt.Sprintf("UUID: %s", uuid)
+    fmt.Println(responseMessage)
+
+    // UUID의 is_active 값을 1로 업데이트
+    err = updateUUIDStatusToActive(db, uuid)
+    if err != nil {
+        log.Printf("Failed to update UUID status to active: %v", err)
+        return &pb.Response{Message: "Failed to update UUID status"}, err
+    }
+
+    return &pb.Response{Message: responseMessage}, nil
 }
 
 // gRPC 서버 시작 함수
