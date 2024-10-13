@@ -16,19 +16,14 @@ func main() {
     must("enable BLE stack", adapter.Enable())
     fmt.Println("BLE adapter initialized.")
 
-    // 서버로부터 요청 처리
-    fmt.Println("Waiting for server request...")
-    handler.ServiceServer()  // 서버에서 요청이 오면 처리
-
-    // gRPC 클라이언트 생성
-    fmt.Println("Creating gRPC client...")
     client := handler.ServiceClient()
     fmt.Println("gRPC client created.")
 
-    // BLE 스캔 시작
     fmt.Println("Starting BLE scan...")
     go ble.RestartScan(client)
 
+    fmt.Println("Waiting for server request...")
+    go handler.ServiceServer()
     select {}
 }
 
