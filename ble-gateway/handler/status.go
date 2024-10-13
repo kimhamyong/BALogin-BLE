@@ -9,7 +9,7 @@ import (
 )
 
 // gRPC server address
-const BaloginServerAddress = "localhost:50053" // for testing
+const BaloginServerAddress = "localhost:50051" // for testing
 
 // Function to create a gRPC client
 func ServiceClient() pb.DeviceServiceClient {

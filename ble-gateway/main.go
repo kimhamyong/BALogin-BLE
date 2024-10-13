@@ -24,6 +24,7 @@ func main() {
 
     fmt.Println("Waiting for server request...")
     go handler.ServiceServer()
+    
     select {}
 }
 

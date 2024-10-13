@@ -17,7 +17,7 @@ type server struct {
 
 // RequestUnusedUUID: Function called when a UUID request is made to the server
 func (s *server) RequestUnusedUUID(ctx context.Context, req *pb.UUIDRequest) (*pb.Response, error) {
-    fmt.Println("/nRequest to server.")
+    fmt.Println("Request to server.")
 
     // Call the service to activate and process the UUID
     uuid, err := db.GetAndActivateUUID()
