@@ -9,11 +9,11 @@ import (
 )
 
 // gRPC 서버 주소
-const grpcServerAddress = "localhost:50053"
+const BaloginServerAddress = "localhost:50053"
 
 // gRPC 클라이언트 생성 함수
-func NewBLEServiceClient() pb.DeviceServiceClient {
-    conn, err := grpc.Dial(grpcServerAddress, grpc.WithInsecure(), grpc.WithBlock())
+func ServiceClient() pb.DeviceServiceClient {
+    conn, err := grpc.Dial(BaloginServerAddress, grpc.WithInsecure(), grpc.WithBlock())
     if err != nil {
         log.Printf("Failed to connect to gRPC server: %v", err)
         return nil // 실패한 경우 nil을 반환하여 호출자가 처리할 수 있도록 함
