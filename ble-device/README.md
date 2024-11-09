@@ -1,4 +1,4 @@
-## Setup & Installation
+## 🛠️ Setup & Installation
 
 ### **1. Install PlatformIO CLI via Python (pip)**
  ```
