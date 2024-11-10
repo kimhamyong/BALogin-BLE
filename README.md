@@ -63,27 +63,30 @@ The system is divided into main components:
 1. **User Registration:** A unique UUID is assigned to each BLE sensor during user registration. This UUID is stored on both the sensor and the server database.
 2. **Automatic Login:** When the user, carrying the BLE sensor, approaches a gateway, the gateway detects the BLE signal, retrieves the UUID, and sends it to the server via gRPC for login.
 3. **Automatic Logout:** If the gateway loses the BLE signal for a set period, it triggers an automatic logout by informing the server.
+<img width="793" alt="Screenshot 2024-11-10 at 4 13 31 PM" src="https://github.com/user-attachments/assets/2bb4de5d-2123-4db1-892b-7ed4205eaebb">
 
 ---
 
 ## System Architecture
+<img width="730" alt="Screenshot 2024-11-10 at 4 13 45 PM" src="https://github.com/user-attachments/assets/23853f81-5f06-4859-9545-2497572c7792">
 
 ---
 
 ## Setup & Installation
 1. **BLE Sensor**
-   [Click Details]
+   [Click Details](ble-device/README.md)
    ```
    Hardware: ESP32-WROOM-32
    IDE: PlatformIO
    ```
 2. **BLE Gateway**
-   [Click Details]
+   [Click Details](ble-gateway/README.md)
    ```
    Hardware: Raspberry Pi 3B+
    OS: Ubuntu Server 24.04.1 LTS
-   Database:
-   Go Version:
-   gRPC Library:
-   BLE Library:
+   Database: SQLite (using `go-sqlite3` v1.14.24)
+   Go Version: 1.22.2 (linux/arm64)
+   gRPC Library: grpc-go v1.67.1
+   Protocol Buffers Library: protobuf v1.35.1
+   BLE Library: tinygo-org/bluetooth v0.10.0
    ```
